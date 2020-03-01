@@ -6,3 +6,5 @@ add_executable(input_keys
         main.c
         game.c
         ../dependencies/glad/glad.c)
+
+target_link_libraries(input_keys PRIVATE rayfork)

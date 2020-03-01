@@ -5871,7 +5871,7 @@ RF_API void rf_unload_image(rf_image image)
 //  - All frames are returned in RGBA format
 RF_API rf_gif rf_load_animated_gif_file(const char* filename, rf_allocator allocator, rf_allocator temp_allocator, rf_io_callbacks io)
 {
-    rf_gif result = (rf_gif) {};
+    rf_gif result = (rf_gif) { 0 };
 
     int file_size = io.get_file_size_proc(filename);
     unsigned char* buffer = RF_ALLOC(temp_allocator, file_size);
@@ -9728,7 +9728,7 @@ RF_API rf_model_animation_array rf_load_model_animations_from_iqm_file(const cha
 
 RF_API rf_model_animation_array rf_load_model_animations_from_iqm(const unsigned char* data, int data_size, rf_allocator allocator, rf_allocator temp_allocator)
 {
-    if (!data || !data_size) return (rf_model_animation_array) {};
+    if (!data || !data_size) return (rf_model_animation_array) { 0 };
 
     #define RF_IQM_MAGIC "INTERQUAKEMODEL" // IQM file magic number
     #define RF_IQM_VERSION 2 // only IQM version 2 supported
@@ -9779,14 +9779,14 @@ RF_API rf_model_animation_array rf_load_model_animations_from_iqm(const unsigned
     {
         RF_LOG_V(RF_LOG_ERROR, "Magic Number \"%s\"does not match.", iqm.magic);
 
-        return (rf_model_animation_array){};
+        return (rf_model_animation_array){ 0 };
     }
 
     if (iqm.version != RF_IQM_VERSION)
     {
         RF_LOG_V(RF_LOG_ERROR, "IQM version %i is incorrect.", iqm.version);
 
-        return (rf_model_animation_array){};
+        return (rf_model_animation_array){ 0 };
     }
 
     rf_model_animation_array result = {

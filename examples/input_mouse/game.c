@@ -11,6 +11,7 @@ const int screen_width = 800;
 const int screen_height = 450;
 
 rf_vec2 ball_position = {(float) screen_width / 2, (float) screen_height / 2 };
+rf_color ballColor = RF_DARKBLUE;
 
 void on_init(void)
 {
@@ -26,19 +27,21 @@ void on_init(void)
 void on_frame(const input_data input)
 {
     //Update
-    if (input.right_pressed) ball_position.x += 2.0f;
-    if (input.left_pressed)  ball_position.x -= 2.0f;
-    if (input.up_pressed)    ball_position.y -= 2.0f;
-    if (input.down_pressed)  ball_position.y += 2.0f;
+    ball_position.x = input.mouse_x;
+    ball_position.y = input.mouse_y;
+
+    if (input.mouse_left_pressed) ballColor = RF_MAROON;
+    else if (input.mouse_middle_pressed) ballColor = RF_LIME;
+    else if (input.mouse_right_pressed) ballColor = RF_DARKBLUE;
 
     //Render
     rf_begin();
 
     rf_clear(RF_RAYWHITE);
 
-    rf_draw_text("move the ball with arrow keys", 10, 10, 20, RF_DARKGRAY);
+    rf_draw_text("move ball with mouse and click mouse button to change color", 10, 10, 20, RF_DARKGRAY);
 
-    rf_draw_circle_v(ball_position, 50, RF_MAROON);
+    rf_draw_circle_v(ball_position, 40, ballColor);
 
     rf_end();
 }

@@ -24,6 +24,8 @@ if (RAYFORK_EXAMPLES)
     add_subdirectory(examples/bunnymark)
     add_subdirectory(examples/first_person_maze)
     add_subdirectory(examples/text_measuring)
+    add_subdirectory(examples/input_mouse)
+    add_subdirectory(examples/input_mouse_wheel)
 endif()
 
 add_subdirectory(rayfork)

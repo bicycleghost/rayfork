@@ -1,5 +1,5 @@
 //Implementation of the geometric shapes example from raylib using rayfork
-
+#include <stdio.h>
 #include "rayfork.h"
 #include "glad/glad.h"
 #include "game.h"
@@ -10,7 +10,8 @@ rf_renderer_memory_buffers rf_mem;
 const int screen_width = 800;
 const int screen_height = 450;
 
-rf_vec2 ball_position = {(float) screen_width / 2, (float) screen_height / 2 };
+float box_pos_y = screen_width / 2 - 40;
+int scroll_speed = 4;
 
 void on_init(void)
 {
@@ -26,19 +27,20 @@ void on_init(void)
 void on_frame(const input_data input)
 {
     //Update
-    if (input.right_pressed) ball_position.x += 2.0f;
-    if (input.left_pressed)  ball_position.x -= 2.0f;
-    if (input.up_pressed)    ball_position.y -= 2.0f;
-    if (input.down_pressed)  ball_position.y += 2.0f;
+    box_pos_y -= input.scroll_y * scroll_speed;
 
     //Render
     rf_begin();
 
     rf_clear(RF_RAYWHITE);
 
-    rf_draw_text("move the ball with arrow keys", 10, 10, 20, RF_DARKGRAY);
 
-    rf_draw_circle_v(ball_position, 50, RF_MAROON);
+    rf_draw_rectangle(screen_width/2 - 40, box_pos_y, 80, 80, RF_MAROON);
+
+    rf_draw_text("Use mouse wheel to move the cube up and down!", 10, 10, 20, RF_GRAY);
+    char scroll_pos_y_text_buff[1024];
+    snprintf(scroll_pos_y_text_buff, 1024, "Box position Y: %f", box_pos_y);
+    rf_draw_text(scroll_pos_y_text_buff, 10, 40, 20, RF_LIGHTGRAY);
 
     rf_end();
 }

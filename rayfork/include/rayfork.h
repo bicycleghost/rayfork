@@ -867,6 +867,7 @@ RF_API void rf_wait(float duration); // Returns elapsed time in seconds since rf
 //endregion
 
 //region default io and allocator
+
 void* rf_malloc_wrapper(rf_allocator_mode mode, int size_to_alloc, void* pointer_to_free, void* user_data);
 
 #if !defined(RF_NO_DEFAULT_IO)
