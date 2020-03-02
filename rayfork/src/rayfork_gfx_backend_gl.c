@@ -2555,7 +2555,7 @@ RF_API unsigned int rf_gfx_load_texture(void* data, int width, int height, int f
                                                       (format == RF_COMPRESSED_DXT3_RGBA) || (format == RF_COMPRESSED_DXT5_RGBA)))
     {
         RF_LOG(RF_LOG_WARNING, "DXT compressed texture format not supported");
-        return id;
+//        return id;
     }
     if ((!rf_internal_ctx->gfx_ctx.tex_comp_etc1_supported) && (format == RF_COMPRESSED_ETC1_RGB))
     {
@@ -2608,6 +2608,7 @@ RF_API unsigned int rf_gfx_load_texture(void* data, int width, int height, int f
         if (glInternalFormat != -1)
         {
             if (format < RF_COMPRESSED_DXT1_RGB) _RF_GL.glTexImage2D(GL_TEXTURE_2D, i, glInternalFormat, mip_width, mip_height, 0, glFormat, glType, (unsigned char* )data + mip_offset);
+            else _RF_GL.glCompressedTexImage2D(GL_TEXTURE_2D, i, glInternalFormat, mip_width, mip_height, 0, mip_size, (unsigned char *)data + mip_offset);
 
             #if defined(RAYFORK_GRAPHICS_BACKEND_GL_33)
                 if (format == RF_UNCOMPRESSED_GRAYSCALE)

@@ -26,6 +26,7 @@ if (RAYFORK_EXAMPLES)
     add_subdirectory(examples/text_measuring)
     add_subdirectory(examples/input_mouse)
     add_subdirectory(examples/input_mouse_wheel)
+    add_subdirectory(examples/dds_image)
 endif()
 
 add_subdirectory(rayfork)

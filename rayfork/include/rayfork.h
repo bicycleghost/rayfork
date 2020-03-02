@@ -1160,6 +1160,7 @@ RF_API rf_image rf_load_image_from_file(const char* filename, rf_allocator alloc
 RF_API rf_image rf_load_image_from_data(const void* data, int data_size, rf_allocator allocator); // Load image from file data into CPU memory (RAM)
 RF_API rf_image rf_load_image_from_pixels(rf_color* pixels, int width, int height, rf_allocator allocator); // Load image from rf_color array data (RGBA - 32bit)
 RF_API rf_image rf_load_image_from_data_in_format(const void* data, int data_size, int width, int height, int format, rf_allocator allocator); // Load image from raw data with parameters
+RF_API rf_image rf_load_image_from_dds(const void* data, int data_size, rf_allocator allocator);
 RF_API void     rf_unload_image(rf_image); // Unloads the image using its allocator
 //endregion
 

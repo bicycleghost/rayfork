@@ -5856,6 +5856,204 @@ RF_API rf_image rf_load_image_from_data_in_format(const void* data, int data_siz
     return dst_image;
 }
 
+// Load image from .dds
+RF_API rf_image rf_load_image_from_dds(const void* data, int data_size, rf_allocator allocator)
+{
+    // Required extension:
+    // GL_EXT_texture_compression_s3tc
+
+    // Supported tokens (defined by extensions)
+    // GL_COMPRESSED_RGB_S3TC_DXT1_EXT      0x83F0
+    // GL_COMPRESSED_RGBA_S3TC_DXT1_EXT     0x83F1
+    // GL_COMPRESSED_RGBA_S3TC_DXT3_EXT     0x83F2
+    // GL_COMPRESSED_RGBA_S3TC_DXT5_EXT     0x83F3
+
+#define FOURCC_DXT1 0x31545844  // Equivalent to "DXT1" in ASCII
+#define FOURCC_DXT3 0x33545844  // Equivalent to "DXT3" in ASCII
+#define FOURCC_DXT5 0x35545844  // Equivalent to "DXT5" in ASCII
+
+    // DDS Pixel Format
+    typedef struct {
+        unsigned int size;
+        unsigned int flags;
+        unsigned int four_cc;
+        unsigned int rgb_bit_count;
+        unsigned int r_bit_mask;
+        unsigned int g_bit_mask;
+        unsigned int b_bit_mask;
+        unsigned int a_bit_mask;
+    } dds_pixel_format;
+
+    // DDS Header (124 bytes)
+    typedef struct {
+        unsigned int size;
+        unsigned int flags;
+        unsigned int height;
+        unsigned int width;
+        unsigned int pitch_or_linear_size;
+        unsigned int depth;
+        unsigned int mipmap_count;
+        unsigned int reserved_1[11];
+        dds_pixel_format ddspf;
+        unsigned int caps;
+        unsigned int caps_2;
+        unsigned int caps_3;
+        unsigned int caps_4;
+        unsigned int reserved_2;
+    } dds_header;
+
+    rf_image image = { 0 };
+
+    // Verify the type of file
+    char dds_header_id[4];
+    int file_iterator = 0;
+//        fread(ddsHeaderId, 4, 1, ddsFile);
+    memcpy(dds_header_id, data + file_iterator, sizeof(dds_header_id));
+    file_iterator += sizeof(dds_header_id);
+
+    if ((dds_header_id[0] != 'D') || (dds_header_id[1] != 'D') || (dds_header_id[2] != 'S') || (dds_header_id[3] != ' '))
+    {
+        RF_LOG_V(RF_LOG_WARNING, "[%s] DDS file does not seem to be a valid image", "filename");
+    }
+    else
+    {
+        dds_header dds_header;
+
+        // Get the image header
+//            fread(&dds_header, sizeof(dds_header), 1, ddsFile);
+        memcpy(&dds_header, data + file_iterator, sizeof(dds_header));
+        file_iterator += sizeof(dds_header);
+
+        RF_LOG_V(RF_LOG_DEBUG, "[%s] DDS file header size: %i", "fileName", sizeof(dds_header));
+        RF_LOG_V(RF_LOG_DEBUG, "[%s] DDS file pixel format size: %i", "fileName", dds_header.ddspf.size);
+        RF_LOG_V(RF_LOG_DEBUG, "[%s] DDS file pixel format flags: 0x%x", "fileName", dds_header.ddspf.flags);
+        RF_LOG_V(RF_LOG_DEBUG, "[%s] DDS file format: 0x%x", "fileName", dds_header.ddspf.fourCC);
+        RF_LOG_V(RF_LOG_DEBUG, "[%s] DDS file bit count: 0x%x", "fileName", dds_header.ddspf.rgbBitCount);
+
+        image.width = dds_header.width;
+        image.height = dds_header.height;
+
+        if (dds_header.mipmap_count == 0) image.mipmaps = 1;      // Parameter not used
+        else image.mipmaps = dds_header.mipmap_count;
+
+        if (dds_header.ddspf.rgb_bit_count == 16)     // 16bit mode, no compressed
+        {
+            if (dds_header.ddspf.flags == 0x40)         // no alpha channel
+            {
+                image.data = (unsigned short *) RF_ALLOC(allocator, image.width * image.height * sizeof(unsigned short));
+//                    fread(image.data, image.width*image.height*sizeof(unsigned short), 1, dds_file);
+                memcpy(image.data, data + file_iterator, image.width * image.height * sizeof(unsigned short));
+                file_iterator += image.width * image.height * sizeof(unsigned short);
+
+                image.format = RF_UNCOMPRESSED_R5G6B5;
+            }
+            else if (dds_header.ddspf.flags == 0x41)        // with alpha channel
+            {
+                if (dds_header.ddspf.a_bit_mask == 0x8000)    // 1bit alpha
+                {
+                    image.data = (unsigned short *) RF_ALLOC(allocator, image.width * image.height * sizeof(unsigned short));
+//                        fread(image.data, image.width*image.height*sizeof(unsigned short), 1, dds_file);
+                    memcpy(image.data, data + file_iterator, image.width * image.height * sizeof(unsigned short));
+                    file_iterator += image.width * image.height * sizeof(unsigned short);
+
+                    unsigned char alpha = 0;
+
+                    // NOTE: Data comes as A1R5G5B5, it must be reordered to R5G5B5A1
+                    for (int i = 0; i < image.width * image.height; i++)
+                    {
+                        alpha = ((unsigned short *)image.data)[i] >> 15;
+                        ((unsigned short *)image.data)[i] = ((unsigned short *)image.data)[i] << 1;
+                        ((unsigned short *)image.data)[i] += alpha;
+                    }
+
+                    image.format = RF_UNCOMPRESSED_R5G5B5A1;
+                }
+                else if (dds_header.ddspf.a_bit_mask == 0xf000)   // 4bit alpha
+                {
+                    image.data = (unsigned short *) RF_ALLOC(allocator, image.width * image.height * sizeof(unsigned short));
+//                        fread(image.data, image.width*image.height*sizeof(unsigned short), 1, dds_file);
+                    memcpy(image.data, data + file_iterator, image.width * image.height * sizeof(unsigned short));
+                    file_iterator += image.width * image.height * sizeof(unsigned short);
+
+                    unsigned char alpha = 0;
+
+                    // NOTE: Data comes as A4R4G4B4, it must be reordered R4G4B4A4
+                    for (int i = 0; i < image.width * image.height; i++)
+                    {
+                        alpha = ((unsigned short *)image.data)[i] >> 12;
+                        ((unsigned short *)image.data)[i] = ((unsigned short *)image.data)[i] << 4;
+                        ((unsigned short *)image.data)[i] += alpha;
+                    }
+
+                    image.format = RF_UNCOMPRESSED_R4G4B4A4;
+                }
+            }
+        }
+
+        if (dds_header.ddspf.flags == 0x40 && dds_header.ddspf.rgb_bit_count == 24)   // DDS_RGB, no compressed
+        {
+            // NOTE: not sure if this case exists...
+            image.data = (unsigned char *) RF_ALLOC(allocator, image.width * image.height * 3 * sizeof(unsigned char));
+//                fread(image.data, image.width*image.height*3, 1, dds_file);
+            memcpy(image.data, data + file_iterator, image.width * image.height * 3 * sizeof(unsigned char));
+            file_iterator += image.width * image.height * 3 * sizeof(unsigned char);
+
+            image.format = RF_UNCOMPRESSED_R8G8B8;
+        }
+        else if (dds_header.ddspf.flags == 0x41 && dds_header.ddspf.rgb_bit_count == 32) // DDS_RGBA, no compressed
+        {
+            image.data = (unsigned char *) RF_ALLOC(allocator, image.width * image.height * 4 * sizeof(unsigned char));
+//                fread(image.data, image.width*image.height*4, 1, dds_file);
+            memcpy(image.data, data + file_iterator, image.width * image.height * 3 * sizeof(unsigned char));
+            file_iterator += image.width * image.height * 3 * sizeof(unsigned char);
+
+            unsigned char blue = 0;
+
+            // NOTE: Data comes as A8R8G8B8, it must be reordered R8G8B8A8 (view next comment)
+            // DirecX understand ARGB as a 32bit DWORD but the actual memory byte alignment is BGRA
+            // So, we must realign B8G8R8A8 to R8G8B8A8
+            for (int i = 0; i < image.width*image.height*4; i += 4)
+            {
+                blue = ((unsigned char *)image.data)[i];
+                ((unsigned char *)image.data)[i] = ((unsigned char *)image.data)[i + 2];
+                ((unsigned char *)image.data)[i + 2] = blue;
+            }
+
+            image.format = RF_UNCOMPRESSED_R8G8B8A8;
+        }
+        else if (((dds_header.ddspf.flags == 0x04) || (dds_header.ddspf.flags == 0x05)) && (dds_header.ddspf.four_cc > 0)) // Compressed
+        {
+            int size;       // DDS image data size
+
+            // Calculate data size, including all mipmaps
+            if (dds_header.mipmap_count > 1) size = dds_header.pitch_or_linear_size * 2;
+            else size = dds_header.pitch_or_linear_size;
+
+            RF_LOG_V(RF_LOG_DEBUG, "Pitch or linear size: %i", dds_header.pitch_or_linear_size);
+
+            image.data = (unsigned char *) RF_ALLOC(allocator, size * sizeof(unsigned char));
+
+//                fread(image.data, size, 1, dds_file);
+            memcpy(image.data, data + file_iterator, size * sizeof(unsigned char));
+            file_iterator += size * sizeof(unsigned char);
+
+            switch (dds_header.ddspf.four_cc)
+            {
+                case FOURCC_DXT1:
+                {
+                    if (dds_header.ddspf.flags == 0x04) image.format = RF_COMPRESSED_DXT1_RGB;
+                    else image.format = RF_COMPRESSED_DXT1_RGBA;
+                } break;
+                case FOURCC_DXT3: image.format = RF_COMPRESSED_DXT3_RGBA; break;
+                case FOURCC_DXT5: image.format = RF_COMPRESSED_DXT5_RGBA; break;
+                default: break;
+            }
+        }
+    }
+
+    return image;
+}
+
 // Unloads the image using its allocator
 RF_API void rf_unload_image(rf_image image)
 {
