@@ -7,7 +7,7 @@ extern rf_context* rf_internal_ctx;
 //Used internally to make gl calls not look too ugly
 #define _RF_GL (rf_internal_ctx->gfx_ctx.gl)
 
-#define rf_internal_strings_match(a, a_len, b, b_len) (a_len == b_len && (strncmp(a, b, a_len) == 0))
+#define RF_INTERNAL_STRINGS_MATCH(a, a_len, b, b_len) (a_len == b_len && (strncmp(a, b, a_len) == 0))
 
 //Use this for glDepthFunc
 #if defined(RAYFORK_GRAPHICS_BACKEND_GL_33)
@@ -15,6 +15,8 @@ extern rf_context* rf_internal_ctx;
 #else //if defined(RAYFORK_GRAPHICS_BACKEND_GL_ES3)
     #define _RF_GL_glDepthFunc glDepthFuncf
 #endif
+
+#define RF_STRING_LITERAL_LEN(str) (sizeof(str) - 1)
 
 //region gl constants
 //Since we don't have an opengl header to include I just pasted all the constants we might need
@@ -851,6 +853,7 @@ extern rf_context* rf_internal_ctx;
 #define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT    0x83F2
 #define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT    0x83F3
 #define GL_ETC1_RGB8_OES                    0x8D64
+#define GL_RGB565 0x8D62
 #define GL_COMPRESSED_RGB8_ETC2             0x9274
 #define GL_COMPRESSED_RGBA8_ETC2_EAC        0x9278
 #define GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG  0x8C00
@@ -1434,49 +1437,49 @@ RF_INTERNAL void rf_internal_set_gl_extension_if_available(const char* gl_ext, i
     #if defined(RAYFORK_GRAPHICS_BACKEND_GL_ES3)
         // Check NPOT textures support
         // NOTE: Only check on OpenGL ES, OpenGL 3.3 has NPOT textures full support as core feature
-        if (rf_internal_strings_match(gl_ext, len, "GL_OES_texture_npot", sizeof("GL_OES_texture_npot"))) rf_internal_ctx->gfx_ctx.tex_npot_supported = true;
+        if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_OES_texture_npot", RF_STRING_LITERAL_LEN("GL_OES_texture_npot"))) rf_internal_ctx->gfx_ctx.tex_npot_supported = true;
 
         // Check texture float support
-        if (rf_internal_strings_match(gl_ext, len, "GL_OES_texture_float", sizeof("GL_OES_texture_float"))) rf_internal_ctx->gfx_ctx.tex_float_supported = true;
+        if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_OES_texture_float", RF_STRING_LITERAL_LEN("GL_OES_texture_float"))) rf_internal_ctx->gfx_ctx.tex_float_supported = true;
 
         // Check depth texture support
-        if ((rf_internal_strings_match(gl_ext, len, "GL_OES_depth_texture", sizeof("GL_OES_depth_texture"))) ||
-            (rf_internal_strings_match(gl_ext, len, "GL_WEBGL_depth_texture", sizeof("GL_WEBGL_depth_texture")))) rf_internal_ctx->gfx_ctx.tex_depth_supported = true;
+        if ((RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_OES_depth_texture", RF_STRING_LITERAL_LEN("GL_OES_depth_texture"))) ||
+            (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_WEBGL_depth_texture", RF_STRING_LITERAL_LEN("GL_WEBGL_depth_texture")))) rf_internal_ctx->gfx_ctx.tex_depth_supported = true;
 
-        if (rf_internal_strings_match(gl_ext, len, "GL_OES_depth24", sizeof("GL_OES_depth24"))) rf_internal_ctx->gfx_ctx.max_depth_bits = 24;
-        if (rf_internal_strings_match(gl_ext, len, "GL_OES_depth32", sizeof("GL_OES_depth32"))) rf_internal_ctx->gfx_ctx.max_depth_bits = 32;
+        if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_OES_depth24", RF_STRING_LITERAL_LEN("GL_OES_depth24"))) rf_internal_ctx->gfx_ctx.max_depth_bits = 24;
+        if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_OES_depth32", RF_STRING_LITERAL_LEN("GL_OES_depth32"))) rf_internal_ctx->gfx_ctx.max_depth_bits = 32;
     #endif
 
     // DDS texture compression support
-    if ((rf_internal_strings_match(gl_ext, len, "GL_EXT_texture_compression_s3tc", sizeof("GL_EXT_texture_compression_s3tc"))) ||
-        (rf_internal_strings_match(gl_ext, len, "GL_WEBGL_compressed_texture_s3tc", sizeof("GL_WEBGL_compressed_texture_s3tc"))) ||
-        (rf_internal_strings_match(gl_ext, len, "GL_WEBKIT_WEBGL_compressed_texture_s3tc", sizeof("GL_WEBKIT_WEBGL_compressed_texture_s3tc")))) rf_internal_ctx->gfx_ctx.tex_comp_dxt_supported = true;
+    if ((RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_EXT_texture_compression_s3tc", RF_STRING_LITERAL_LEN("GL_EXT_texture_compression_s3tc"))) ||
+        (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_WEBGL_compressed_texture_s3tc", RF_STRING_LITERAL_LEN("GL_WEBGL_compressed_texture_s3tc"))) ||
+        (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_WEBKIT_WEBGL_compressed_texture_s3tc", RF_STRING_LITERAL_LEN("GL_WEBKIT_WEBGL_compressed_texture_s3tc")))) rf_internal_ctx->gfx_ctx.tex_comp_dxt_supported = true;
 
     // ETC1 texture compression support
-    if ((rf_internal_strings_match(gl_ext, len, "GL_OES_compressed_ETC1_RGB8_texture", sizeof("GL_OES_compressed_ETC1_RGB8_texture"))) ||
-        (rf_internal_strings_match(gl_ext, len, "GL_WEBGL_compressed_texture_etc1", sizeof("GL_WEBGL_compressed_texture_etc1")))) rf_internal_ctx->gfx_ctx.tex_comp_etc1_supported = true;
+    if ((RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_OES_compressed_ETC1_RGB8_texture", RF_STRING_LITERAL_LEN("GL_OES_compressed_ETC1_RGB8_texture"))) ||
+        (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_WEBGL_compressed_texture_etc1", RF_STRING_LITERAL_LEN("GL_WEBGL_compressed_texture_etc1")))) rf_internal_ctx->gfx_ctx.tex_comp_etc1_supported = true;
 
     // ETC2/EAC texture compression support
-    if (rf_internal_strings_match(gl_ext, len, "GL_ARB_ES3_compatibility", sizeof("GL_ARB_ES3_compatibility"))) rf_internal_ctx->gfx_ctx.tex_comp_etc2_supported = true;
+    if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_ARB_ES3_compatibility", RF_STRING_LITERAL_LEN("GL_ARB_ES3_compatibility"))) rf_internal_ctx->gfx_ctx.tex_comp_etc2_supported = true;
 
     // PVR texture compression support
-    if (rf_internal_strings_match(gl_ext, len, "GL_IMG_texture_compression_pvrtc", sizeof("GL_IMG_texture_compression_pvrtc"))) rf_internal_ctx->gfx_ctx.tex_comp_pvrt_supported = true;
+    if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_IMG_texture_compression_pvrtc", RF_STRING_LITERAL_LEN("GL_IMG_texture_compression_pvrtc"))) rf_internal_ctx->gfx_ctx.tex_comp_pvrt_supported = true;
 
     // ASTC texture compression support
-    if (rf_internal_strings_match(gl_ext, len, "GL_KHR_texture_compression_astc_hdr", sizeof("GL_KHR_texture_compression_astc_hdr"))) rf_internal_ctx->gfx_ctx.tex_comp_astc_supported = true;
+    if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_KHR_texture_compression_astc_hdr", RF_STRING_LITERAL_LEN("GL_KHR_texture_compression_astc_hdr"))) rf_internal_ctx->gfx_ctx.tex_comp_astc_supported = true;
 
     // Anisotropic texture filter support
-    if (rf_internal_strings_match(gl_ext, len, "GL_EXT_texture_filter_anisotropic", sizeof("GL_EXT_texture_filter_anisotropic")))
+    if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_EXT_texture_filter_anisotropic", RF_STRING_LITERAL_LEN("GL_EXT_texture_filter_anisotropic")))
     {
         rf_internal_ctx->gfx_ctx.tex_anisotropic_filter_supported = true;
         _RF_GL.glGetFloatv(0x84FF, &rf_internal_ctx->gfx_ctx.max_anisotropic_level);   // GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
     }
 
     // Clamp mirror wrap mode supported
-    if (rf_internal_strings_match(gl_ext, len, "GL_EXT_texture_mirror_clamp", sizeof("GL_EXT_texture_mirror_clamp"))) rf_internal_ctx->gfx_ctx.tex_mirror_clamp_supported = true;
+    if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_EXT_texture_mirror_clamp", RF_STRING_LITERAL_LEN("GL_EXT_texture_mirror_clamp"))) rf_internal_ctx->gfx_ctx.tex_mirror_clamp_supported = true;
 
     // Debug marker support
-    if (rf_internal_strings_match(gl_ext, len, "GL_EXT_debug_marker", sizeof("GL_EXT_debug_marker"))) rf_internal_ctx->gfx_ctx.debug_marker_supported = true;
+    if (RF_INTERNAL_STRINGS_MATCH(gl_ext, len, "GL_EXT_debug_marker", RF_STRING_LITERAL_LEN("GL_EXT_debug_marker"))) rf_internal_ctx->gfx_ctx.debug_marker_supported = true;
 }
 
 // Compute framebuffer size relative to screen size and global_display size
@@ -2818,15 +2821,27 @@ RF_API void rf_gfx_get_gl_texture_formats(int format, unsigned int* glInternalFo
         #elif defined(RAYFORK_GRAPHICS_BACKEND_GL_33)
         case RF_UNCOMPRESSED_GRAYSCALE: *glInternalFormat = GL_R8; *glFormat = GL_RED; *glType = GL_UNSIGNED_BYTE; break;
         case RF_UNCOMPRESSED_GRAY_ALPHA: *glInternalFormat = GL_RG8; *glFormat = GL_RG; *glType = GL_UNSIGNED_BYTE; break;
-            //case RF_UNCOMPRESSED_R5G6B5: *glInternalFormat = GL_RGB565; *glFormat = GL_RGB; *glType = GL_UNSIGNED_SHORT_5_6_5; break;
+        case RF_UNCOMPRESSED_R5G6B5: *glInternalFormat = GL_RGB565; *glFormat = GL_RGB; *glType = GL_UNSIGNED_SHORT_5_6_5; break;
         case RF_UNCOMPRESSED_R8G8B8: *glInternalFormat = GL_RGB8; *glFormat = GL_RGB; *glType = GL_UNSIGNED_BYTE; break;
         case RF_UNCOMPRESSED_R5G5B5A1: *glInternalFormat = GL_RGB5_A1; *glFormat = GL_RGBA; *glType = GL_UNSIGNED_SHORT_5_5_5_1; break;
         case RF_UNCOMPRESSED_R4G4B4A4: *glInternalFormat = GL_RGBA4; *glFormat = GL_RGBA; *glType = GL_UNSIGNED_SHORT_4_4_4_4; break;
         case RF_UNCOMPRESSED_R8G8B8A8: *glInternalFormat = GL_RGBA8; *glFormat = GL_RGBA; *glType = GL_UNSIGNED_BYTE; break;
-        case RF_UNCOMPRESSED_R32: if (rf_internal_ctx->gfx_ctx.tex_float_supported) *glInternalFormat = GL_R32F; *glFormat = GL_RED; *glType = GL_FLOAT; break;
-        case RF_UNCOMPRESSED_R32G32B32: if (rf_internal_ctx->gfx_ctx.tex_float_supported) *glInternalFormat = GL_RGB32F; *glFormat = GL_RGB; *glType = GL_FLOAT; break;
-        case RF_UNCOMPRESSED_R32G32B32A32: if (rf_internal_ctx->gfx_ctx.tex_float_supported) *glInternalFormat = GL_RGBA32F; *glFormat = GL_RGBA; *glType = GL_FLOAT; break;
+        case RF_UNCOMPRESSED_R32: if (rf_internal_ctx->gfx_ctx.tex_float_supported) *glInternalFormat = GL_R32F; *glFormat = GL_RED; *glType = GL_FLOAT; break; // NOTE: Requires extension OES_texture_float
+        case RF_UNCOMPRESSED_R32G32B32: if (rf_internal_ctx->gfx_ctx.tex_float_supported) *glInternalFormat = GL_RGB32F; *glFormat = GL_RGB; *glType = GL_FLOAT; break; // NOTE: Requires extension OES_texture_float
+        case RF_UNCOMPRESSED_R32G32B32A32: if (rf_internal_ctx->gfx_ctx.tex_float_supported) *glInternalFormat = GL_RGBA32F; *glFormat = GL_RGBA; *glType = GL_FLOAT; break; // NOTE: Requires extension OES_texture_float
         #endif
+
+        case RF_COMPRESSED_DXT1_RGB: if (rf_internal_ctx->gfx_ctx.tex_comp_dxt_supported) *glInternalFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT; break;
+        case RF_COMPRESSED_DXT1_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_dxt_supported) *glInternalFormat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT; break;
+        case RF_COMPRESSED_DXT3_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_dxt_supported) *glInternalFormat = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT; break;
+        case RF_COMPRESSED_DXT5_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_dxt_supported) *glInternalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT; break;
+        case RF_COMPRESSED_ETC1_RGB: if (rf_internal_ctx->gfx_ctx.tex_comp_etc1_supported) *glInternalFormat = GL_ETC1_RGB8_OES; break;                      // NOTE: Requires OpenGL ES 2.0 or OpenGL 4.3
+        case RF_COMPRESSED_ETC2_RGB: if (rf_internal_ctx->gfx_ctx.tex_comp_etc2_supported) *glInternalFormat = GL_COMPRESSED_RGB8_ETC2; break;               // NOTE: Requires OpenGL ES 3.0 or OpenGL 4.3
+        case RF_COMPRESSED_ETC2_EAC_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_etc2_supported) *glInternalFormat = GL_COMPRESSED_RGBA8_ETC2_EAC; break;     // NOTE: Requires OpenGL ES 3.0 or OpenGL 4.3
+        case RF_COMPRESSED_PVRT_RGB: if (rf_internal_ctx->gfx_ctx.tex_comp_pvrt_supported) *glInternalFormat = GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG; break;    // NOTE: Requires PowerVR GPU
+        case RF_COMPRESSED_PVRT_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_pvrt_supported) *glInternalFormat = GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG; break;  // NOTE: Requires PowerVR GPU
+        case RF_COMPRESSED_ASTC_4x4_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_astc_supported) *glInternalFormat = GL_COMPRESSED_RGBA_ASTC_4x4_KHR; break;  // NOTE: Requires OpenGL ES 3.1 or OpenGL 4.3
+        case RF_COMPRESSED_ASTC_8x8_RGBA: if (rf_internal_ctx->gfx_ctx.tex_comp_astc_supported) *glInternalFormat = GL_COMPRESSED_RGBA_ASTC_8x8_KHR; break;  // NOTE: Requires OpenGL ES 3.1 or OpenGL 4.3
 
         default: RF_LOG(RF_LOG_WARNING, "rf_texture format not supported"); break;
     }
