@@ -5857,7 +5857,7 @@ RF_API rf_image rf_load_image_from_data_in_format(const void* data, int data_siz
 }
 
 // Load image from .dds
-RF_API rf_image rf_load_image_from_dds(const void* data, int data_size, rf_allocator allocator)
+RF_API rf_image rf_load_image_from_dds(const void* data, rf_allocator allocator)
 {
     // Required extension:
     // GL_EXT_texture_compression_s3tc
@@ -6050,6 +6050,405 @@ RF_API rf_image rf_load_image_from_dds(const void* data, int data_size, rf_alloc
             }
         }
     }
+
+    return image;
+}
+
+// Load image from .pkm
+RF_API rf_image rf_load_image_from_pkm(const void* data, rf_allocator allocator)
+{
+    // Required extensions:
+    // GL_OES_compressed_ETC1_RGB8_texture  (ETC1) (OpenGL ES 2.0)
+    // GL_ARB_ES3_compatibility  (ETC2/EAC) (OpenGL ES 3.0)
+
+    // Supported tokens (defined by extensions)
+    // GL_ETC1_RGB8_OES                 0x8D64
+    // GL_COMPRESSED_RGB8_ETC2          0x9274
+    // GL_COMPRESSED_RGBA8_ETC2_EAC     0x9278
+
+    // PKM file (ETC1) Header (16 bytes)
+    typedef struct {
+        char id[4];                 // "PKM "
+        char version[2];            // "10" or "20"
+        unsigned short format;      // Data format (big-endian) (Check list below)
+        unsigned short width;       // Texture width (big-endian) (origWidth rounded to multiple of 4)
+        unsigned short height;      // Texture height (big-endian) (origHeight rounded to multiple of 4)
+        unsigned short orig_width;   // Original width (big-endian)
+        unsigned short orig_height;  // Original height (big-endian)
+    } s_pkm_header;
+
+    // Formats list
+    // version 10: format: 0=ETC1_RGB, [1=ETC1_RGBA, 2=ETC1_RGB_MIP, 3=ETC1_RGBA_MIP] (not used)
+    // version 20: format: 0=ETC1_RGB, 1=ETC2_RGB, 2=ETC2_RGBA_OLD, 3=ETC2_RGBA, 4=ETC2_RGBA1, 5=ETC2_R, 6=ETC2_RG, 7=ETC2_SIGNED_R, 8=ETC2_SIGNED_R
+
+    // NOTE: The extended width and height are the widths rounded up to a multiple of 4.
+    // NOTE: ETC is always 4bit per pixel (64 bit for each 4x4 block of pixels)
+
+    rf_image image = { 0 };
+
+//    FILE *pkmFile = fopen(fileName, "rb");
+
+//    if (pkmFile == NULL)
+//    {
+//        RF_LOG_V(LOG_WARNING, "[%s] PKM file could not be opened", fileName);
+//    }
+//    else
+//    {
+    s_pkm_header pkm_header = { 0 };
+    int file_iterator = 0;
+
+    // Get the image header
+//    fread(&pkm_header, sizeof(pkm_header), 1, pkmFile);
+    memcpy(pkm_header.id, data, sizeof(s_pkm_header));
+    file_iterator += sizeof(s_pkm_header);
+
+    if ((pkm_header.id[0] != 'P') || (pkm_header.id[1] != 'K') || (pkm_header.id[2] != 'M') || (pkm_header.id[3] != ' '))
+    {
+        RF_LOG_V(LOG_WARNING, "[%s] PKM file does not seem to be a valid image", "fileName");
+    }
+    else
+    {
+        // NOTE: format, width and height come as big-endian, data must be swapped to little-endian
+        pkm_header.format = ((pkm_header.format & 0x00FF) << 8) | ((pkm_header.format & 0xFF00) >> 8);
+        pkm_header.width = ((pkm_header.width & 0x00FF) << 8) | ((pkm_header.width & 0xFF00) >> 8);
+        pkm_header.height = ((pkm_header.height & 0x00FF) << 8) | ((pkm_header.height & 0xFF00) >> 8);
+
+        RF_LOG_V("PKM (ETC) image width: %i", pkm_header.width);
+        RF_LOG_V("PKM (ETC) image height: %i", pkm_header.height);
+        RF_LOG_V("PKM (ETC) image format: %i", pkm_header.format);
+
+        image.width = pkm_header.width;
+        image.height = pkm_header.height;
+        image.mipmaps = 1;
+
+        int bpp = 4;
+        if (pkm_header.format == 3) bpp = 8;
+
+        int size = image.width * image.height * bpp/8;  // Total data size in bytes
+
+        image.data = (unsigned char *) RF_ALLOC(allocator, size * sizeof(unsigned char));
+
+//        fread(image.data, size, 1, pkmFile);
+        memcpy(image.data, data + file_iterator, size);
+
+        if (pkm_header.format == 0) image.format = RF_COMPRESSED_ETC1_RGB;
+        else if (pkm_header.format == 1) image.format = RF_COMPRESSED_ETC2_RGB;
+        else if (pkm_header.format == 3) image.format = RF_COMPRESSED_ETC2_EAC_RGBA;
+    }
+
+//    fclose(pkmFile);    // Close file pointer
+//    }
+
+    return image;
+}
+
+// Load image from .ktx
+RF_API rf_image rf_load_image_from_ktx(const void* data, rf_allocator allocator)
+{
+    // Required extensions:
+    // GL_OES_compressed_ETC1_RGB8_texture  (ETC1)
+    // GL_ARB_ES3_compatibility  (ETC2/EAC)
+
+    // Supported tokens (defined by extensions)
+    // GL_ETC1_RGB8_OES                 0x8D64
+    // GL_COMPRESSED_RGB8_ETC2          0x9274
+    // GL_COMPRESSED_RGBA8_ETC2_EAC     0x9278
+
+    // KTX file Header (64 bytes)
+    // v1.1 - https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
+    // v2.0 - http://github.khronos.org/KTX-Specification/
+
+    // TODO: Support KTX 2.2 specs!
+
+    typedef struct {
+        char id[12];                        // Identifier: "«KTX 11»\r\n\x1A\n"
+        unsigned int endianness;            // Little endian: 0x01 0x02 0x03 0x04
+        unsigned int gl_type;                // For compressed textures, gl_type must equal 0
+        unsigned int gl_type_size;            // For compressed texture data, usually 1
+        unsigned int gl_format;              // For compressed textures is 0
+        unsigned int gl_internal_format;      // Compressed internal format
+        unsigned int gl_base_internal_format;  // Same as gl_format (RGB, RGBA, ALPHA...)
+        unsigned int width;                 // Texture image width in pixels
+        unsigned int height;                // Texture image height in pixels
+        unsigned int depth;                 // For 2D textures is 0
+        unsigned int elements;              // Number of array elements, usually 0
+        unsigned int faces;                 // Cubemap faces, for no-cubemap = 1
+        unsigned int mipmap_levels;          // Non-mipmapped textures = 1
+        unsigned int key_value_data_size;      // Used to encode any arbitrary data...
+    } s_ktx_header;
+
+    // NOTE: Before start of every mipmap data block, we have: unsigned int dataSize
+
+    rf_image image = { 0 };
+
+//    FILE *ktxFile = fopen(fileName, "rb");
+
+//    if (ktxFile == NULL)
+//    {
+//        TRACELOG(LOG_WARNING, "[%s] KTX image file could not be opened", fileName);
+//    }
+//    else
+//    {
+    s_ktx_header ktx_header = { 0 };
+    int file_iterator = 0;
+        // Get the image header
+//    fread(&ktxHeader, sizeof(KTXHeader), 1, ktxFile);
+    memcpy(&ktx_header, data, sizeof(s_ktx_header));
+    file_iterator += sizeof(s_ktx_header);
+
+    if ((ktx_header.id[1] != 'K') || (ktx_header.id[2] != 'T') || (ktx_header.id[3] != 'X') ||
+        (ktx_header.id[4] != ' ') || (ktx_header.id[5] != '1') || (ktx_header.id[6] != '1'))
+    {
+        RF_LOG_V(LOG_WARNING, "[%s] KTX file does not seem to be a valid file", "fileName");
+    }
+    else
+    {
+        image.width = ktx_header.width;
+        image.height = ktx_header.height;
+        image.mipmaps = ktx_header.mipmap_levels;
+
+        RF_LOG_V("KTX (ETC) image width: %i", ktx_header.width);
+        RF_LOG_V("KTX (ETC) image height: %i", ktx_header.height);
+        RF_LOG_V("KTX (ETC) image format: 0x%x", ktx_header.gl_internal_format);
+
+        unsigned char unused;
+
+        if (ktx_header.key_value_data_size > 0)
+        {
+            for (unsigned int i = 0; i < ktx_header.key_value_data_size; i++)
+            {
+//                fread(&unused, sizeof(unsigned char), 1U, ktxFile);
+                memcpy(&unused, data + file_iterator, sizeof(unsigned char));
+                file_iterator += sizeof(unsigned char);
+            }
+        }
+
+        int dataSize;
+//        fread(&dataSize, sizeof(unsigned int), 1, ktxFile);
+        memcpy(&dataSize, data + file_iterator, sizeof(unsigned int));
+        file_iterator += sizeof(unsigned int);
+
+        image.data = (unsigned char *) RF_ALLOC(allocator, dataSize * sizeof(unsigned char));
+
+//        fread(image.data, dataSize, 1, ktxFile);
+        memcpy(image.data, data + file_iterator, dataSize);
+
+        if (ktx_header.gl_internal_format == 0x8D64) image.format = RF_COMPRESSED_ETC1_RGB;
+        else if (ktx_header.gl_internal_format == 0x9274) image.format = RF_COMPRESSED_ETC2_RGB;
+        else if (ktx_header.gl_internal_format == 0x9278) image.format = RF_COMPRESSED_ETC2_EAC_RGBA;
+    }
+
+//        fclose(ktxFile);    // Close file pointer
+//    }
+
+    return image;
+}
+
+RF_API rf_image rf_load_image_from_pvr(const void* data, rf_allocator allocator)
+{
+    // Required extension:
+    // GL_IMG_texture_compression_pvrtc
+
+    // Supported tokens (defined by extensions)
+    // GL_COMPRESSED_RGB_PVRTC_4BPPV1_IMG       0x8C00
+    // GL_COMPRESSED_RGBA_PVRTC_4BPPV1_IMG      0x8C02
+
+    // PVR file v3 Header (52 bytes)
+    // NOTE: After it could be metadata (15 bytes?)
+    typedef struct {
+        char id[4];
+        unsigned int flags;
+        unsigned char channels[4];      // pixelFormat high part
+        unsigned char channelDepth[4];  // pixelFormat low part
+        unsigned int colourSpace;
+        unsigned int channelType;
+        unsigned int height;
+        unsigned int width;
+        unsigned int depth;
+        unsigned int numSurfaces;
+        unsigned int numFaces;
+        unsigned int numMipmaps;
+        unsigned int metaDataSize;
+    } pvr_header_v3;
+
+    rf_image image = { 0 };
+
+//    FILE *pvrFile = fopen(fileName, "rb");
+
+//    if (pvrFile == NULL)
+//    {
+//        TRACELOG(LOG_WARNING, "[%s] PVR file could not be opened", fileName);
+//    }
+//    else
+//    {
+        // Check PVR image version
+    unsigned char pvr_version = 0;
+    int file_iterator = 0;
+//    fread(&pvrVersion, sizeof(unsigned char), 1, pvrFile);
+    memcpy(&pvr_version, data, sizeof(unsigned char));
+    // The file_iterator should be 0 here
+//    fseek(pvrFile, 0, SEEK_SET);
+
+    // Load different PVR data formats
+    if (pvr_version == 0x50)
+    {
+        pvr_header_v3 pvr_header = { 0 };
+
+        // Get PVR image header
+//        fread(&pvr_header, sizeof(pvr_header_v3), 1, pvrFile);
+        memcpy(&pvr_header, data, sizeof(pvr_header_v3));
+        file_iterator += sizeof(pvr_header_v3);
+
+        if ((pvr_header.id[0] != 'P') || (pvr_header.id[1] != 'V') || (pvr_header.id[2] != 'R') || (pvr_header.id[3] != 3))
+        {
+            RF_LOG_V(LOG_WARNING, "[%s] PVR file does not seem to be a valid image", "fileName");
+        }
+        else
+        {
+            image.width = pvr_header.width;
+            image.height = pvr_header.height;
+            image.mipmaps = pvr_header.numMipmaps;
+
+            // Check data format
+            if (((pvr_header.channels[0] == 'l') && (pvr_header.channels[1] == 0)) && (pvr_header.channelDepth[0] == 8))
+                image.format = RF_UNCOMPRESSED_GRAYSCALE;
+            else if (((pvr_header.channels[0] == 'l') && (pvr_header.channels[1] == 'a')) && ((pvr_header.channelDepth[0] == 8) && (pvr_header.channelDepth[1] == 8)))
+                image.format = RF_UNCOMPRESSED_GRAY_ALPHA;
+            else if ((pvr_header.channels[0] == 'r') && (pvr_header.channels[1] == 'g') && (pvr_header.channels[2] == 'b'))
+            {
+                if (pvr_header.channels[3] == 'a')
+                {
+                    if ((pvr_header.channelDepth[0] == 5) && (pvr_header.channelDepth[1] == 5) && (pvr_header.channelDepth[2] == 5) && (pvr_header.channelDepth[3] == 1))
+                        image.format = RF_UNCOMPRESSED_R5G5B5A1;
+                    else if ((pvr_header.channelDepth[0] == 4) && (pvr_header.channelDepth[1] == 4) && (pvr_header.channelDepth[2] == 4) && (pvr_header.channelDepth[3] == 4))
+                        image.format = RF_UNCOMPRESSED_R4G4B4A4;
+                    else if ((pvr_header.channelDepth[0] == 8) && (pvr_header.channelDepth[1] == 8) && (pvr_header.channelDepth[2] == 8) && (pvr_header.channelDepth[3] == 8))
+                        image.format = RF_UNCOMPRESSED_R8G8B8A8;
+                }
+                else if (pvr_header.channels[3] == 0)
+                {
+                    if ((pvr_header.channelDepth[0] == 5) && (pvr_header.channelDepth[1] == 6) && (pvr_header.channelDepth[2] == 5)) image.format = RF_UNCOMPRESSED_R5G6B5;
+                    else if ((pvr_header.channelDepth[0] == 8) && (pvr_header.channelDepth[1] == 8) && (pvr_header.channelDepth[2] == 8)) image.format = RF_UNCOMPRESSED_R8G8B8;
+                }
+            }
+            else if (pvr_header.channels[0] == 2) image.format = RF_COMPRESSED_PVRT_RGB;
+            else if (pvr_header.channels[0] == 3) image.format = RF_COMPRESSED_PVRT_RGBA;
+
+            // Skip meta data header
+//            unsigned char unused = 0;
+//            for (int i = 0; i < pvr_header.metaDataSize; i++)
+//            {
+////                fread(&unused, sizeof(unsigned char), 1, pvrFile);
+//            }
+            file_iterator += sizeof(unsigned char) * pvr_header.metaDataSize;
+
+            // Calculate data size (depends on format)
+            int bpp = 0;
+
+            switch (image.format)
+            {
+                case RF_UNCOMPRESSED_GRAYSCALE: bpp = 8; break;
+                case RF_UNCOMPRESSED_GRAY_ALPHA:
+                case RF_UNCOMPRESSED_R5G5B5A1:
+                case RF_UNCOMPRESSED_R5G6B5:
+                case RF_UNCOMPRESSED_R4G4B4A4: bpp = 16; break;
+                case RF_UNCOMPRESSED_R8G8B8A8: bpp = 32; break;
+                case RF_UNCOMPRESSED_R8G8B8: bpp = 24; break;
+                case RF_COMPRESSED_PVRT_RGB:
+                case RF_COMPRESSED_PVRT_RGBA: bpp = 4; break;
+                default: break;
+            }
+
+            int dataSize = image.width * image.height * bpp / 8;  // Total data size in bytes
+            image.data = (unsigned char *) RF_ALLOC(allocator, dataSize * sizeof(unsigned char));
+
+            // Read data from file
+//            fread(image.data, dataSize, 1, pvrFile);
+            memcpy(image.data, data + file_iterator, dataSize);
+        }
+    }
+    else if (pvr_version == 52) RF_LOG_V(RF_LOG_INFO, "PVR v2 not supported, update your files to PVR v3");
+
+//        fclose(pvrFile);    // Close file pointer
+//    }
+
+    return image;
+}
+
+RF_API rf_image rf_load_image_from_astc(const void* data, rf_allocator allocator)
+{
+    // Required extensions:
+    // GL_KHR_texture_compression_astc_hdr
+    // GL_KHR_texture_compression_astc_ldr
+
+    // Supported tokens (defined by extensions)
+    // GL_COMPRESSED_RGBA_ASTC_4x4_KHR      0x93b0
+    // GL_COMPRESSED_RGBA_ASTC_8x8_KHR      0x93b7
+
+    // ASTC file Header (16 bytes)
+    typedef struct {
+        unsigned char id[4];        // Signature: 0x13 0xAB 0xA1 0x5C
+        unsigned char blockX;       // Block X dimensions
+        unsigned char blockY;       // Block Y dimensions
+        unsigned char blockZ;       // Block Z dimensions (1 for 2D images)
+        unsigned char width[3];     // Image width in pixels (24bit value)
+        unsigned char height[3];    // Image height in pixels (24bit value)
+        unsigned char length[3];    // Image Z-size (1 for 2D images)
+    } s_astc_header;
+
+    rf_image image = { 0 };
+
+//    FILE *astcFile = fopen(fileName, "rb");
+
+//    if (astcFile == NULL)
+//    {
+//        TRACELOG(LOG_WARNING, "[%s] ASTC file could not be opened", fileName);
+//    }
+//    else
+//    {
+    s_astc_header astc_header = { 0 };
+    int file_iterator = 0;
+    // Get ASTC image header
+//    fread(&astc_header, sizeof(s_astc_header), 1, astcFile);
+    memcpy(&astc_header, data, sizeof(s_astc_header));
+    file_iterator += sizeof(s_astc_header);
+
+    if ((astc_header.id[3] != 0x5c) || (astc_header.id[2] != 0xa1) || (astc_header.id[1] != 0xab) || (astc_header.id[0] != 0x13))
+    {
+        RF_LOG_V(RF_LOG_WARNING, "[%s] ASTC file does not seem to be a valid image", "fileName");
+    }
+    else
+    {
+        // NOTE: Assuming Little Endian (could it be wrong?)
+        image.width = 0x00000000 | ((int)astc_header.width[2] << 16) | ((int)astc_header.width[1] << 8) | ((int)astc_header.width[0]);
+        image.height = 0x00000000 | ((int)astc_header.height[2] << 16) | ((int)astc_header.height[1] << 8) | ((int)astc_header.height[0]);
+
+        RF_LOG_V("ASTC image width: %i", image.width);
+        RF_LOG_V("ASTC image height: %i", image.height);
+        RF_LOG_V("ASTC image blocks: %ix%i", astc_header.blockX, astc_header.blockY);
+
+        image.mipmaps = 1;      // NOTE: ASTC format only contains one mipmap level
+
+        // NOTE: Each block is always stored in 128bit so we can calculate the bpp
+        int bpp = 128/(astc_header.blockX * astc_header.blockY);
+
+        // NOTE: Currently we only support 2 blocks configurations: 4x4 and 8x8
+        if ((bpp == 8) || (bpp == 2))
+        {
+            int dataSize = image.width * image.height * bpp / 8;  // Data size in bytes
+
+            image.data = (unsigned char *) RF_ALLOC(allocator, dataSize * sizeof(unsigned char));
+//            fread(image.data, dataSize, 1, astcFile);
+            memcpy(image.data, data + file_iterator, dataSize * sizeof(unsigned char));
+
+            if (bpp == 8) image.format = RF_COMPRESSED_ASTC_4x4_RGBA;
+            else if (bpp == 2) image.format = RF_COMPRESSED_ASTC_8x8_RGBA;
+        }
+        else RF_LOG_V(RF_LOG_WARNING, "[%s] ASTC block size configuration not supported", "fileName");
+    }
+
+//        fclose(astcFile);
+//    }
 
     return image;
 }

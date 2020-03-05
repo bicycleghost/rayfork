@@ -1,4 +1,4 @@
-//Implementation of the geometric shapes example from raylib using rayfork
+//Implementation of the mouse input example from raylib using rayfork
 
 #include "rayfork.h"
 #include "glad/glad.h"

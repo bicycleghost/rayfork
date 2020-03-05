@@ -1,4 +1,4 @@
-// Implementation dds images in Rayfork
+// Implementation ktx images in Rayfork
 
 #include "rayfork.h"
 #include "glad.h"
@@ -23,14 +23,14 @@ void on_init(void)
     rf_init(&rf_ctx, &rf_mem, screen_width, screen_height, RF_DEFAULT_OPENGL_PROCS);
     rf_load_default_font(RF_DEFAULT_ALLOCATOR, RF_DEFAULT_ALLOCATOR);
 
-    const char* path = "../../../examples/assets/mario.dds";
+    const char* path = "../../../examples/assets/ktx_test.ktx";
 
     int size = RF_DEFAULT_IO.get_file_size_proc(path);
     void* buffer = malloc(size);
 
     RF_DEFAULT_IO.read_file_into_buffer_proc(path, buffer, size);
 
-    image = rf_load_image_from_dds(buffer, RF_DEFAULT_ALLOCATOR);
+    image = rf_load_image_from_ktx(buffer, RF_DEFAULT_ALLOCATOR);
     texture = rf_load_texture_from_image(image);
 }
 
