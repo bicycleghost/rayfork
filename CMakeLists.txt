@@ -31,6 +31,7 @@ if (RAYFORK_EXAMPLES)
     add_subdirectory(examples/ktx_image)
     add_subdirectory(examples/pvr_image)
     add_subdirectory(examples/astc_image)
+    add_subdirectory(examples/2d_camera)
 endif()
 
 add_subdirectory(rayfork)
