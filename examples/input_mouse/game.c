@@ -19,7 +19,7 @@ void on_init(void)
     gladLoadGL();
 
     //Initialise rayfork and load the default font
-    rf_init(&rf_ctx, &rf_mem, screen_height, screen_width, RF_DEFAULT_OPENGL_PROCS);
+    rf_init(&rf_ctx, &rf_mem, screen_width, screen_height, RF_DEFAULT_OPENGL_PROCS);
     rf_set_target_fps(60);
     rf_load_default_font(RF_DEFAULT_ALLOCATOR, RF_DEFAULT_ALLOCATOR);
 }
