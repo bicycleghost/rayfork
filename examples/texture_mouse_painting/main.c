@@ -50,6 +50,8 @@ void platform_on_event(const sapp_event* event)
         }
     }
 
+    global_input_data.mouse_x = event->mouse_x;
+    global_input_data.mouse_x = event->mouse_x;
 }
 
 sapp_desc sokol_main(int argc, char** argv) 

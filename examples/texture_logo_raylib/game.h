@@ -6,11 +6,7 @@
 typedef struct input_data input_data;
 struct input_data
 {
-    int left_down;
-    int right_down;
 
-    int left_pressed;
-    int right_pressed;
 };
 
 void on_init(void);

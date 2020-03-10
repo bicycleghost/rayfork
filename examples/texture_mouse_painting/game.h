@@ -6,6 +6,11 @@
 typedef struct input_data input_data;
 struct input_data
 {
+    float mouse_x;
+    float mouse_y;
+
+    int mouse_left_pressed;
+
     int left_down;
     int right_down;
 

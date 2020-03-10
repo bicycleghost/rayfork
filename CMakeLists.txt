@@ -34,6 +34,8 @@ if (RAYFORK_EXAMPLES)
     add_subdirectory(examples/2d_camera)
     add_subdirectory(examples/2d_camera_platformer)
     add_subdirectory(examples/texture_rectangle)
+    add_subdirectory(examples/texture_logo_raylib)
+    add_subdirectory(examples/texture_mouse_painting)
 endif()
 
 add_subdirectory(rayfork)
