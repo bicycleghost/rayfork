@@ -7,9 +7,6 @@
 rf_context   rf_ctx;
 rf_renderer_memory_buffers    rf_mem;
 
-int screen_width = 800;
-int screen_height = 450;
-
 rf_texture2d texture;
 
 void on_init(void)
@@ -23,7 +20,7 @@ void on_init(void)
 
     rf_set_target_fps(60);
 
-    texture = rf_load_texture_from_file("../../../examples/assets/textures_logo_raylib.png", RF_DEFAULT_ALLOCATOR, RF_DEFAULT_IO);
+    texture = rf_load_texture_from_file("../../../examples/assets/raylib_logo.png", RF_DEFAULT_ALLOCATOR, RF_DEFAULT_IO);
 }
 
 void on_frame(const input_data input)
@@ -35,7 +32,7 @@ void on_frame(const input_data input)
 
     rf_clear(RF_RAYWHITE);
 
-    rf_draw_texture(texture, (rf_vec2){screen_width / 2 - texture.width / 2, screen_height / 2 - texture.height/2 }, 0.0f, 1.0f, RF_RAYWHITE);
+    rf_draw_texture(texture, (rf_vec2){SCREEN_WIDTH / 2 - texture.width / 2, SCREEN_HEIGHT / 2 - texture.height/2 }, 0.0f, 1.0f, RF_RAYWHITE);
 
     rf_draw_text("this IS a texture!", 360, 370, 10, RF_GRAY);
 

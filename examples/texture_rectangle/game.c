@@ -3,6 +3,7 @@
 #include "game.h"
 #include "rayfork.h"
 #include "glad.h"
+#include <stdio.h>
 
 #define MAX_FRAME_SPEED     15
 #define MIN_FRAME_SPEED      1

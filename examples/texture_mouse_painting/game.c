@@ -1,17 +1,13 @@
-//Implementation of the geometric shapes example from raylib using rayfork
+//Implementation of the texture mouse painting example from raylib using rayfork
 
 #include "game.h"
 #include "rayfork.h"
 #include "glad.h"
-#include "../bunnymark/game.h"
 
 #define MAX_COLORS_COUNT    23          // Number of colors available
 
 rf_context   rf_ctx;
 rf_renderer_memory_buffers    rf_mem;
-
-int screen_width = 800;
-int screen_height = 450;
 
 // Colours to choose from
 rf_color colors[MAX_COLORS_COUNT] = {
@@ -52,7 +48,7 @@ void on_init(void)
     }
 
     // Create a RenderTexture2D to use as a canvas
-     target = rf_load_render_texture(screen_width, screen_height);
+     target = rf_load_render_texture(SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Clear render texture before entering the game loop
     rf_begin_render_to_texture(target);
@@ -65,13 +61,17 @@ void on_init(void)
 void on_frame(const input_data input)
 {
     // Update
-    rf_vec2 mouse_pos = { 0 };
-    mouse_pos.x = input.mouse_x;
-    mouse_pos.y = input.mouse_y;
 
     // Move between colors with keys
-    if (input.right_pressed) color_selected++;
-    else if (input.left_pressed) color_selected--;
+    if (input.right_down) {
+        color_selected++;
+        color_selected_prev = color_selected;
+    }
+    else if (input.left_down)
+    {
+        color_selected--;
+        color_selected_prev = color_selected;
+    }
 
     if (color_selected >= MAX_COLORS_COUNT) color_selected = MAX_COLORS_COUNT - 1;
     else if (color_selected < 0) color_selected = 0;
@@ -79,7 +79,7 @@ void on_frame(const input_data input)
     // Choose color with mouse
     for (int i = 0; i < MAX_COLORS_COUNT; i++)
     {
-        if (rf_check_collision_point_rec(mouse_pos, colors_recs[i]))
+        if (rf_check_collision_point_rec((rf_vec2){ input.mouse_x, input.mouse_y }, colors_recs[i]))
         {
             color_mouse_hover = i;
             break;
@@ -87,7 +87,7 @@ void on_frame(const input_data input)
         else color_mouse_hover = -1;
     }
 
-    if ((color_mouse_hover >= 0) && input.mouse_left_pressed)
+    if ((color_mouse_hover >= 0) && input.mouse_left_down)
     {
         color_selected = color_mouse_hover;
         color_selected_prev = color_selected;
@@ -95,11 +95,12 @@ void on_frame(const input_data input)
 
     // Change brush size
     // Working on mouse_wheel
-//    brush_size += GetMouseWheelMove()*5;
+    brush_size += input.scroll_y;
+
     if (brush_size < 2) brush_size = 2;
     if (brush_size > 50) brush_size = 50;
 
-    if (input.c_pressed)
+    if (input.c_down)
     {
         // Clear render texture to clear color
         rf_begin_render_to_texture(target);
@@ -136,11 +137,10 @@ void on_frame(const input_data input)
     // NOTE: Saving painted texture to a default named image
     if ((btn_save_mouse_hover && input.mouse_left_up) || input.s_pressed)
     {
-        rf_image image = rf_get_texture_data(target.texture, RF_DEFAULT_ALLOCATOR);
-        rf_image_flip_vertical(&image, RF_DEFAULT_ALLOCATOR);
-        // @TODO: remove this and everything related to saving the image
+//        rf_image image = rf_get_texture_data(target.texture, RF_DEFAULT_ALLOCATOR);
+//        rf_image_flip_vertical(&image, RF_DEFAULT_ALLOCATOR);
 //        rf_export_image(image, "my_amazing_texture_painting.png");
-        rf_unload_image(image);
+//        rf_unload_image(image);
         show_save_message = true;
     }
 
@@ -160,6 +160,40 @@ void on_frame(const input_data input)
 
     rf_clear(RF_RAYWHITE);
 
-    // @TODO: Add the draw functions for this example
+    // NOTE: Render texture must be y-flipped due to default OpenGL coordinates (left-bottom)
+    rf_draw_texture_region(target.texture, (rf_rec){ 0, 0, target.texture.width, -target.texture.height },
+            (rf_rec){ 0, 0, target.texture.width, target.texture.height }, (rf_vec2){ 0, 0 }, 0.0f, RF_WHITE);
+
+    // Draw drawing circle for reference
+    if (input.mouse_y > 50)
+    {
+        if (input.mouse_right_pressed) rf_draw_circle_lines(input.mouse_x, input.mouse_y, brush_size, RF_GRAY);
+        else rf_draw_circle(input.mouse_x, input.mouse_y, brush_size, colors[color_selected]);
+    }
+
+    // Draw top panel
+    rf_draw_rectangle(0, 0, SCREEN_WIDTH, 50, RF_RAYWHITE);
+    rf_draw_line(0, 50, SCREEN_HEIGHT, 50, RF_LIGHTGRAY);
+
+    // Draw color selection rectangles
+    for (int i = 0; i < MAX_COLORS_COUNT; i++) rf_draw_rectangle_rec(colors_recs[i], colors[i]);
+    rf_draw_rectangle_outline((rf_rec){10, 10, 30, 30}, 1.0f, RF_LIGHTGRAY);
+
+    if (color_mouse_hover >= 0) rf_draw_rectangle_rec(colors_recs[color_mouse_hover], rf_fade(RF_WHITE, 0.6f));
+
+    rf_draw_rectangle_outline((rf_rec){ colors_recs[color_selected].x - 2, colors_recs[color_selected].y - 2,
+                                      colors_recs[color_selected].width + 4, colors_recs[color_selected].height + 4 }, 2, RF_BLACK);
+
+    // Draw save image button
+    rf_draw_rectangle_outline(btn_save_rec, 2, btn_save_mouse_hover ? RF_RED : RF_BLACK);
+    rf_draw_text("SAVE!", 755, 20, 10, btn_save_mouse_hover ? RF_RED : RF_BLACK);
+
+    // Draw save image message
+    if (show_save_message) {
+        rf_draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, rf_fade(RF_RAYWHITE, 0.8f));
+        rf_draw_rectangle(0, 150, SCREEN_WIDTH, 80, RF_BLACK);
+        rf_draw_text("RayFork doesn't support image exporting :)", 150, 180, 20, RF_RAYWHITE);
+    }
+
     rf_end();
 }
